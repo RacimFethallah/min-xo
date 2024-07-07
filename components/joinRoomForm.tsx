@@ -16,6 +16,7 @@ export default function JoinRoomForm() {
     const roomCodeRegex = /^[a-zA-Z0-9]{3}-[a-zA-Z0-9]{3}-[a-zA-Z0-9]{3}$/;
     if (roomCode.trim() && roomCodeRegex.test(roomCode)) {
       setIsJoiningRoom(true);
+      router.push(`/room/${roomCode}`);
     } else {
       toast.error("Please enter a valid room code (format: xxx-xxx-xxx)");
     }

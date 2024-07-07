@@ -1,9 +1,11 @@
-"use client"
+"use client";
 
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { FaSpinner } from "react-icons/fa";
 
 export default function CreateRoomButton() {
+  const router = useRouter();
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
 
   function generateRoomCode() {
@@ -24,6 +26,7 @@ export default function CreateRoomButton() {
   const createRoom = () => {
     setIsCreatingRoom(true);
     const roomId = generateRoomCode();
+    router.push(`/room/${roomId}`);
   };
 
   return (
