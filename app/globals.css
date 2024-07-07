@@ -48,6 +48,11 @@
   cursor: pointer;
 }
 
+.cursor-not-allowed {
+  cursor: not-allowed;
+  background-color: #f0f0f0;
+}
+
 .square:hover {
   background-color: #f0f0f0;
 }

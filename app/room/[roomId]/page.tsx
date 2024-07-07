@@ -2,15 +2,19 @@
 
 import { createClient } from "@/utils/supabase/client";
 import { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { Toaster, toast } from "sonner";
+import { IoExitOutline } from "react-icons/io5";
 
 export default function Room({ params }: { params: { roomId: string } }) {
+  const router = useRouter();
   const [board, setBoard] = useState(Array(9).fill(null));
   const [isXNext, setIsXNext] = useState(true);
   const [winner, setWinner] = useState<string | null>(null);
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
-  const [users, setUsers] = useState<{ key: string }[]>([]);
+  const [users, setUsers] = useState<{ key: string; name: string }[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<string | null>(null);
 
   const supabase: SupabaseClient = createClient();
@@ -37,7 +41,8 @@ export default function Room({ params }: { params: { roomId: string } }) {
   };
 
   const handleClick = (index: number) => {
-    if (board[index] || winner) return;
+    if (board[index] || winner || currentPlayer != users[isXNext ? 0 : 1]?.key)
+      return;
 
     const newBoard = board.slice();
     newBoard[index] = isXNext ? "X" : "O";
@@ -57,7 +62,13 @@ export default function Room({ params }: { params: { roomId: string } }) {
   };
 
   const renderSquare = (index: number) => (
-    <button key={index} className="square" onClick={() => handleClick(index)}>
+    <button
+      key={index}
+      className={`square ${
+        currentPlayer != users[isXNext ? 0 : 1]?.key ? "cursor-not-allowed" : ""
+      }`}
+      onClick={() => handleClick(index)}
+    >
       {board[index]}
     </button>
   );
@@ -83,6 +94,8 @@ export default function Room({ params }: { params: { roomId: string } }) {
         data: { user },
       } = await supabase.auth.getUser();
       const userKey = user?.id || `anonymous-${Date.now()}`;
+      const username =
+        user?.user_metadata.username || user?.email || "Anonymous";
 
       const roomChannel = supabase.channel(`room_${params.roomId}`, {
         config: {
@@ -96,24 +109,39 @@ export default function Room({ params }: { params: { roomId: string } }) {
         .on("presence", { event: "sync" }, () => {
           const newState = roomChannel.presenceState();
           console.log("sync", newState);
-          const usersInRoom = Object.keys(newState).map((key) => ({
+          const usersInRoom = Object.entries(newState).map(([key, value]) => ({
             key,
+            name: (value as any)[0]?.name || "Anonymous",
           }));
-          setUsers(usersInRoom.slice(0, 2));
+          if (usersInRoom.length > 2) {
+            toast.error("Room is full. Redirecting to home...");
+            router.push("/");
+            return;
+          }
+          setUsers(usersInRoom);
           setCurrentPlayer(userKey);
         })
-        .on("presence", { event: "join" }, ({ key }) => {
+        .on("presence", { event: "join" }, ({ key, newPresences }) => {
           setUsers((prevUsers) => {
-            const updatedUsers = [...prevUsers, { key }].slice(0, 2);
-            if (updatedUsers.length <= 2) {
-              toast.success(`User ${key} joined the room`);
+            if (prevUsers.length >= 2) {
+              toast.error("Room is full");
+              return prevUsers;
             }
+            const newUser = {
+              key,
+              name: (newPresences as any)[0]?.name || "Anonymous",
+            };
+            const updatedUsers = [...prevUsers, newUser];
+            toast.success(`${newUser.name} joined the room`);
             return updatedUsers;
           });
         })
         .on("presence", { event: "leave" }, ({ key }) => {
-          setUsers((prevUsers) => prevUsers.filter((user) => user.key !== key));
-          toast.error(`User ${key} left the room`);
+          setUsers((prevUsers) => {
+            const leavingUser = prevUsers.find((user) => user.key === key);
+            // toast.error(`${leavingUser?.name || "A player"} left the room`);
+            return prevUsers.filter((user) => user.key !== key);
+          });
         })
         .on("broadcast", { event: "game_update" }, ({ payload }) => {
           setBoard(payload.board);
@@ -123,7 +151,10 @@ export default function Room({ params }: { params: { roomId: string } }) {
         // .subscribe();
         .subscribe(async (status) => {
           if (status === "SUBSCRIBED") {
-            await roomChannel.track({ online_at: new Date().toISOString() });
+            await roomChannel.track({
+              online_at: new Date().toISOString(),
+              name: username,
+            });
           }
         });
 
@@ -144,8 +175,21 @@ export default function Room({ params }: { params: { roomId: string } }) {
   return (
     <div className="p-16 flex flex-col items-center">
       <Toaster />
+      <Link
+        href="/"
+        className="absolute left-8 top-8 py-2 px-4 rounded-md no-underline text-foreground bg-btn-background hover:bg-btn-background-hover flex items-center group text-sm"
+      >
+        <IoExitOutline size={32} className=" rotate-180 mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />{" "}
+        Exit Room
+      </Link>
       <h1 className="text-2xl mb-4">Room: {params.roomId}</h1>
       <p className="mb-4">Players in room: {users.length} / 2</p>
+      {users.map((user, index) => (
+        <p key={user.key} className="mb-2">
+          Player {index + 1}: {user.name}{" "}
+          {user.key === currentPlayer ? "(You)" : ""}
+        </p>
+      ))}
       {users.length === 2 && (
         <p className="mb-4">{isYourTurn ? "Your turn" : "Opponent's turn"}</p>
       )}

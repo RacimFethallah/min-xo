@@ -28,7 +28,7 @@ export default function JoinRoomForm() {
         value={roomCode}
         onChange={(e) => setRoomCode(e.target.value)}
         placeholder="Enter Room Code"
-        className="border border-gray-300 rounded px-3 py-2 mb-2 w-full"
+        className=" text-black border border-gray-300 rounded px-3 py-2 mb-2 w-full"
       />
       <button
         type="submit"

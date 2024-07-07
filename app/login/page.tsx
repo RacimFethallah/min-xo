@@ -32,6 +32,7 @@ export default function Login({
     "use server";
 
     const origin = headers().get("origin");
+    const username = formData.get("username") as string;
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const supabase = createClient();
@@ -40,7 +41,8 @@ export default function Login({
       email,
       password,
       options: {
-        emailRedirectTo: `${origin}/auth/callback`,
+        // emailRedirectTo: `${origin}/auth/callback`,
+        data: { username },
       },
     });
 
@@ -75,6 +77,15 @@ export default function Login({
       </Link>
 
       <form className="flex-1 flex flex-col w-full justify-center gap-2 text-foreground">
+        <label htmlFor="username">
+          Username
+        </label>
+        <input
+          className="rounded-md px-4 py-2 bg-inherit border mb-6"
+          name="username"
+          placeholder="username"
+          required
+        />
         <label className="text-md" htmlFor="email">
           Email
         </label>
