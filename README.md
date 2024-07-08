@@ -25,6 +25,10 @@
 You can view a fully working demo at [Demo Link](https://min-xo.vercel.app/).
 
 
+[![Watch the video]((https://raw.githubusercontent.com/RacimFethallah/min-xo/main/thumbnail.png))](https://raw.githubusercontent.com/RacimFethallah/min-xo/main/Demo%20video.mov)
+
+
+
 ## Clone and run locally
 
 1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
