@@ -25,7 +25,6 @@
 You can view a fully working demo at [Demo Link](https://min-xo.vercel.app/).
 
 
-[![Watch the video]((https://raw.githubusercontent.com/RacimFethallah/min-xo/main/thumbnail.png))](https://raw.githubusercontent.com/RacimFethallah/min-xo/main/Demo%20video.mov)
 
 
 
