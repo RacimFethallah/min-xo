@@ -30,6 +30,20 @@ export default function Room({ params }: { params: { roomId: string } }) {
     [2, 4, 6],
   ];
 
+  const logGameEvent = async (eventType: string, eventData: any) => {
+    try {
+      const { error } = await supabase.from("game_events").insert({
+        room_id: params.roomId,
+        event_type: eventType,
+        event_data: eventData,
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error logging game event:", error);
+    }
+  };
+
   const calculateWinner = (board: Array<string | null>) => {
     for (let combination of winningCombinations) {
       const [a, b, c] = combination;
@@ -40,7 +54,7 @@ export default function Room({ params }: { params: { roomId: string } }) {
     return board.includes(null) ? null : "Draw";
   };
 
-  const handleClick = (index: number) => {
+  const handleClick = async (index: number) => {
     if (board[index] || winner || currentPlayer != users[isXNext ? 0 : 1]?.key)
       return;
 
@@ -51,6 +65,15 @@ export default function Room({ params }: { params: { roomId: string } }) {
 
     const gameWinner = calculateWinner(newBoard);
     setWinner(gameWinner);
+
+    await logGameEvent("player_move", {
+      player: isXNext ? "X" : "O",
+      position: index,
+    });
+
+    if (gameWinner) {
+      await logGameEvent("game_end", { winner: gameWinner });
+    }
 
     if (channel) {
       channel.send({
@@ -73,11 +96,13 @@ export default function Room({ params }: { params: { roomId: string } }) {
     </button>
   );
 
-  const resetGame = () => {
+  const resetGame = async () => {
     const newBoard = Array(9).fill(null);
     setBoard(newBoard);
     setIsXNext(true);
     setWinner(null);
+
+    await logGameEvent("game_reset", {});
 
     if (channel) {
       channel.send({
@@ -133,6 +158,9 @@ export default function Room({ params }: { params: { roomId: string } }) {
             };
             const updatedUsers = [...prevUsers, newUser];
             toast.success(`${newUser.name} joined the room`);
+
+            logGameEvent("player_join", { player: newUser.name });
+
             return updatedUsers;
           });
         })
@@ -140,6 +168,11 @@ export default function Room({ params }: { params: { roomId: string } }) {
           setUsers((prevUsers) => {
             const leavingUser = prevUsers.find((user) => user.key === key);
             // toast.error(`${leavingUser?.name || "A player"} left the room`);
+
+            if (leavingUser) {
+              logGameEvent("player_leave", { player: leavingUser.name });
+            }
+
             return prevUsers.filter((user) => user.key !== key);
           });
         })
@@ -179,7 +212,10 @@ export default function Room({ params }: { params: { roomId: string } }) {
         href="/"
         className="absolute left-8 top-8 py-2 px-4 rounded-md no-underline text-foreground bg-btn-background hover:bg-btn-background-hover flex items-center group text-sm"
       >
-        <IoExitOutline size={32} className=" rotate-180 mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />{" "}
+        <IoExitOutline
+          size={32}
+          className=" rotate-180 mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1"
+        />{" "}
         Exit Room
       </Link>
       <h1 className="text-2xl mb-4">Room: {params.roomId}</h1>
